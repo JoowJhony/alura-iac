@@ -13,7 +13,7 @@ variable "security_group" {
 variable "meu_ip" {
   description = "IP para acesso SSH a instância"
   type        = string
-  default     = "177.172.61.64/32"
+  default     = "177.27.200.75/32"
 }
 variable "vpc_id" {
   description = "ID da VPC que será herado do root module"
