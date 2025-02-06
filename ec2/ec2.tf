@@ -46,19 +46,19 @@ resource "aws_instance" "ubuntu_ec2" {
   availability_zone           = var.availability_zone
   vpc_security_group_ids      = [aws_security_group.ec2_sg.id]
   subnet_id                   = var.public_subnet_id
-  key_name = aws_key_pair.key_pair_ubuntu_ec2.key_name
-  user_data = <<-EOF
-		 #!/bin/bash
-		 cd /home/ubuntu
-		 echo "<h1>Feito com Terraform</h1>" > index.html
-		 nohup busybox httpd -f -p 8080 &
-		 EOF
+#  key_name = aws_key_pair.key_pair_ubuntu_ec2.key_name
+#  user_data = <<-EOF
+#		 #!/bin/bash
+#		 cd /home/ubuntu
+#		 echo "<h1>Feito com Terraform</h1>" > index.html
+#		 nohup busybox httpd -f -p 8080 &
+#		 EOF
   tags = {
     Name = "ubuntu_kp"
   }
 }
 
-resource "aws_key_pair" "key_pair_ubuntu_ec2" {
-  key_name   = "ubuntu_kp"
-  public_key = file("/home/joow/.ssh/ubuntu_kp.pub")
-}
+#resource "aws_key_pair" "key_pair_ubuntu_ec2" {
+#  key_name   = "ubuntu_kp"
+#  public_key = file("/home/joow/.ssh/ubuntu_kp.pub")
+#}
