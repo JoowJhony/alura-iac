@@ -1,0 +1,38 @@
+---
+- hosts: all
+  tasks:
+    - shell:  'echo "{{ansible_user}} ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/{{ansible_user}}'
+      become: yes
+    - name: Run apt-get update and install dependencies
+      become: yes
+      ansible.builtin.apt:
+        update_cache: yes
+        pkg:
+        - apache2
+        - ghostscript
+        - libapache2-mod-php
+        - mysql-server
+        - php
+        - php-bcmath
+        - php-curl
+        - php-imagick
+        - php-intl
+        - php-json
+        - php-mbstring
+        - php-mysql
+        - php-xml
+        - php-zip
+        state: latest
+    - name: Create a directory and give permissions for www-data
+      ansible.builtin.file:
+        path: /srv/www
+        state: directory
+        owner: www-data
+        group: www-data
+      become: yes
+    - name: Unarchive a file that needs to be downloaded (added in 2.0)
+      ansible.builtin.unarchive:
+        src: https://wordpress.org/latest.tar.gz
+        dest: /srv/www
+        remote_src: yes
+      become: yes
