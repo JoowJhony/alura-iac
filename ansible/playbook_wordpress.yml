@@ -1,5 +1,11 @@
 ---
 - hosts: all
+  handlers:
+    - name: restart apache
+      service:
+        name: apache2
+        state: restarted
+      become: yes
   tasks:
     - shell:  'echo "{{ansible_user}} ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/{{ansible_user}}'
       become: yes
@@ -11,8 +17,9 @@
         - apache2
         - ghostscript
         - libapache2-mod-php
-        - mysql-server
         - php
+        - mysql-server
+        - python3-pymysql
         - php-bcmath
         - php-curl
         - php-imagick
@@ -35,4 +42,57 @@
         src: https://wordpress.org/latest.tar.gz
         dest: /srv/www
         remote_src: yes
+      become: yes
+    - name: Copy file with owner and permissions
+      ansible.builtin.copy:
+        src: /home/joow/projetos/iac/alura-iac/ansible/wordpress.conf
+        dest: /etc/apache2/sites-available/000-default.conf
+      become: yes
+      notify:
+        - restart apache
+    - name: Copy file with owner and permissions
+      ansible.builtin.copy:
+        src: wp_dir/wp-config-sample.php
+        dest: wp_dir/wp-config.php
+        force: no
+        remote_src: yes
+      become: yes
+    - name: Create a new database with name '{{ wp_db_name }}'
+      community.mysql.mysql_db:
+        name: {{ wp_db_name }}
+        state: present
+        login_unix_socket: /run/mysqld/mysqld.sock
+      become: yes
+    - name: Create database user with name '{{ wp_db_user }}' and password '12345' with all database privileges
+      community.mysql.mysql_user:
+        name: {{ wp_db_user }}
+        password: 12345
+        priv: '*.*:ALL'
+        state: present
+        login_unix_socket: /run/mysqld/mysqld.sock
+      become: yes
+    - name: Replace old hostname with new hostname (requires Ansible >= 2.4)
+      ansible.builtin.replace:
+        path: wp_dir/wp-config.php
+        regexp: '{{ item.regexp }}'
+        replace: '{{ item.replace }}'
+      with_items:
+      - {regexp: 'database_name_here', replace: '{{ wp_db_name }}'}
+      - {regexp: 'username_here', replace: '{{ wp_db_user }}'}
+      - {regexp: 'password_here', replace: '12345'}
+      become: yes
+    - name: Replace a localhost entry searching for a literal string to avoid escaping
+      ansible.builtin.lineinfile:
+        path: wp_dir/wp-config.php
+        search_string: '{{ item.search_string }}'
+        line: '{{ item.line }}'
+      with_items:
+      - {search_string: "define( 'AUTH_KEY',         'put your unique phrase here' );", line: "define('AUTH_KEY',         '|v!6bT8W<#qfKv+NuBW8*BZxpXzb4F0MP64B0o4E-N~XWg&)7oH|e=oaaZX1,WlD');"}
+      - {search_string: "define( 'SECURE_AUTH_KEY',  'put your unique phrase here' );", line: "define('SECURE_AUTH_KEY',  'i819YYE#kJDWJE0sm5vx+c-S=U{LP%55K*|~]p$$;H`E84Za]N|6J99q/z9+^e)$');"}
+      - {search_string: "define( 'LOGGED_IN_KEY',    'put your unique phrase here' );", line: "define('LOGGED_IN_KEY',    'E*VwscP0A,!)WUC0X-G~ip6v{jy3-*/j+d~5|FHE7wMWx9S9l$QlY[7VSSPkNh]#');"}
+      - {search_string: "define( 'NONCE_KEY',        'put your unique phrase here' );", line: "define('NONCE_KEY',        '_3ppGyWKn<#V v`Mzo!G%d_3=C,>oGf/}$VYRsVl-l^3F[e..iU{oD>{}5vjkQ#5');"}
+      - {search_string: "define( 'AUTH_SALT',        'put your unique phrase here' );", line: "define('AUTH_SALT',        'S4{M+1|nW}I[zidnK}RSin;zzR~6$W4Fw/jW.|KT,x>s3rqM*z#q?7{jrnxZqD.g');"}
+      - {search_string: "define( 'SECURE_AUTH_SALT', 'put your unique phrase here' );", line: "define('SECURE_AUTH_SALT', 'c>t1rX0^TtiG$#x0!QaWEI_y5k6,MNl=N|gTDSSreVuZ3+u>`%O2Xlgh}`#ydU.q');"}
+      - {search_string: "define( 'LOGGED_IN_SALT',   'put your unique phrase here' );", line: "define('LOGGED_IN_SALT',   '=wt`;`sH&4QC>!>:{Hitw5oHAv{-4;.iM6Q`Tn)x8i:=3H3b>@CGm-zqicrvwi-N');"}
+      - {search_string: "define( 'NONCE_SALT',       'put your unique phrase here' );", line: "define('NONCE_SALT',       '|}>o/~v !}|Fvg8_k|K*uSlbk/AIcvIz^B?(~Qi8`CUn4^O?8a,Jk`>_AD:tuHQ6');"}
       become: yes
